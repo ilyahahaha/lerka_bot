@@ -10,6 +10,12 @@ dependencies = [
     "aiogram>=3.0.0b7",
     "playwright>=1.35.0",
     "pydantic[dotenv]>=1.10.11",
+    "orjson>=3.9.1",
+    "aiohttp>=3.8.4",
+    "aiohttp-client-cache>=0.8.1",
+    "aiosqlite>=0.19.0",
+    "beautifulsoup4>=4.12.2",
+    "lxml>=4.9.3",
 ]
 requires-python = ">=3.11"
 license = {text = "MIT"}

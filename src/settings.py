@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     bot_token: str
 
     allowed_ids: list[int]
+    snils: str
 
     class Config:
         env_file = ".env"
