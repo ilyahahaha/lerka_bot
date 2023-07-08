@@ -2,9 +2,7 @@ from bs4 import BeautifulSoup
 
 from aiohttp_client_cache import CachedSession, SQLiteBackend
 
-
 from schemas.istu import IstuCompetitionGroup, IstuGroup
-from services.base import get_data
 
 
 async def parse_istu(

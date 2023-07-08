@@ -3,7 +3,6 @@ from bs4 import BeautifulSoup, PageElement, ResultSet
 from playwright.async_api import async_playwright
 
 from schemas.bgu import BguCompetitionGroup, BguGroup
-from services.base import automated_get_data
 from utils.snils import format_snils
 
 
@@ -30,13 +29,12 @@ async def parse_bgu(
             await page.locator(
                 'select[name="ctl00$MainContent$DDLspecList"]'
             ).select_option(value=value_to_select)
-
             await page.wait_for_load_state("domcontentloaded")
 
             data = await page.content()
 
             await browser.close()
-            
+
     except Exception:
         raise Exception("Ошибка при получении данных БГУ.")
     else:

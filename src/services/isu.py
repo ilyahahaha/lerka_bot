@@ -2,7 +2,6 @@ from aiohttp_client_cache import CachedSession, SQLiteBackend
 import orjson
 
 from schemas.isu import IsuCompetitionGroup, IsuGroup
-from services.base import RequestMethod, get_data
 from settings import Settings
 from utils.snils import format_snils
 
