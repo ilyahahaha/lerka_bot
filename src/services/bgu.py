@@ -1,5 +1,7 @@
 from bs4 import BeautifulSoup, PageElement, ResultSet
 
+from playwright.async_api import async_playwright
+
 from schemas.bgu import BguCompetitionGroup, BguGroup
 from services.base import automated_get_data
 from utils.snils import format_snils
@@ -19,9 +21,22 @@ async def parse_bgu(
             raise ValueError("Неверное значение конкурсной группы")
 
     try:
-        data = await automated_get_data(
-            url="http://bgu.ru/abitur/bach/rating.aspx", selector=value_to_select
-        )
+        async with async_playwright() as playwright:
+            chromium = playwright.chromium
+            browser = await chromium.launch(headless=True)
+            page = await browser.new_page()
+
+            await page.goto("http://bgu.ru/abitur/bach/rating.aspx")
+            await page.locator(
+                'select[name="ctl00$MainContent$DDLspecList"]'
+            ).select_option(value=value_to_select)
+
+            await page.wait_for_load_state("domcontentloaded")
+
+            data = await page.content()
+
+            await browser.close()
+            
     except Exception:
         raise Exception("Ошибка при получении данных БГУ.")
     else:

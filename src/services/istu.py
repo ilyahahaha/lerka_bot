@@ -1,5 +1,8 @@
 from bs4 import BeautifulSoup
 
+from aiohttp_client_cache import CachedSession, SQLiteBackend
+
+
 from schemas.istu import IstuCompetitionGroup, IstuGroup
 from services.base import get_data
 
@@ -18,7 +21,9 @@ async def parse_istu(
             raise ValueError("Неверное значение конкурсной группы")
 
     try:
-        data = await get_data(url=url)
+        async with CachedSession(cache=SQLiteBackend()) as session:
+            async with session.get(url) as response:
+                data = await response.text()
     except Exception:
         raise Exception("Ошибка при получении данных ИРНИТУ.")
     else:

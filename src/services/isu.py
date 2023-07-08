@@ -1,3 +1,6 @@
+from aiohttp_client_cache import CachedSession, SQLiteBackend
+import orjson
+
 from schemas.isu import IsuCompetitionGroup, IsuGroup
 from services.base import RequestMethod, get_data
 from settings import Settings
@@ -39,11 +42,9 @@ async def parse_isu(
             raise ValueError("Неверное значение конкурсной группы")
 
     try:
-        data_dict = await get_data(
-            url="https://pk.isu.ru/x/getProcessor",
-            payload=request_data,
-            method=RequestMethod.POST,
-        )
+        async with CachedSession(cache=SQLiteBackend()) as session:
+            async with session.post("https://pk.isu.ru/x/getProcessor", data=orjson.dumps(request_data), headers={"Content-Type": "application/json"}) as response:
+                data_dict: dict = orjson.loads(await response.text())
     except Exception:
         raise Exception("Ошибка при получении данных ИГУ.")
     else:
