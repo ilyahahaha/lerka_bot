@@ -1,14 +1,12 @@
 from bs4 import BeautifulSoup, PageElement, ResultSet
-
 from playwright.async_api import async_playwright
-
 from schemas.bgu import BguCompetitionGroup, BguGroup
 from utils.snils import format_snils
 
 
 async def parse_bgu(
     snils: str, group: BguGroup = BguGroup.ECONOMIC
-) -> BguCompetitionGroup:
+) -> BguCompetitionGroup | None:
     match group:
         case BguGroup.STAFF_MANAGEMENT:
             value_to_select = "38.03.03 Управление персоналом"
@@ -22,7 +20,7 @@ async def parse_bgu(
     try:
         async with async_playwright() as playwright:
             chromium = playwright.chromium
-            browser = await chromium.launch(headless=True)
+            browser = await chromium.launch()
             page = await browser.new_page()
 
             await page.goto("http://bgu.ru/abitur/bach/rating.aspx")
@@ -36,10 +34,12 @@ async def parse_bgu(
             await browser.close()
 
     except Exception:
-        raise Exception("Ошибка при получении данных БГУ.")
+        # TODO: log exception
+        return None
     else:
+        # TODO: log that data is None
         if data is None:
-            raise Exception("Ошибка при получении данных БГУ.")
+            return None
 
     soup = BeautifulSoup(data, "lxml")
 
@@ -51,6 +51,10 @@ async def parse_bgu(
         for tr in rating_data
         if tr.find_next("td").contents[0].text.strip() == format_snils(snils)
     ]
+
+    if lerka_data[0] is None:
+        # log that data is None
+        return None
 
     group_object = BguCompetitionGroup(
         group=group,

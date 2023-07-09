@@ -1,6 +1,5 @@
-from aiohttp_client_cache import CachedSession, SQLiteBackend
 import orjson
-
+from aiohttp_client_cache import CachedSession, SQLiteBackend
 from schemas.isu import IsuCompetitionGroup, IsuGroup
 from settings import Settings
 from utils.snils import format_snils
@@ -10,7 +9,7 @@ settings = Settings()
 
 async def parse_isu(
     snils: str, group: IsuGroup = IsuGroup.LANG_LITERATURE
-) -> IsuCompetitionGroup:
+) -> IsuCompetitionGroup | None:
     request_data = {
         "processor": "rating_getListAbiturients",
         "КонкурснаяГруппа": {
@@ -42,13 +41,19 @@ async def parse_isu(
 
     try:
         async with CachedSession(cache=SQLiteBackend()) as session:
-            async with session.post("https://pk.isu.ru/x/getProcessor", data=orjson.dumps(request_data), headers={"Content-Type": "application/json"}) as response:
+            async with session.post(
+                "https://pk.isu.ru/x/getProcessor",
+                data=orjson.dumps(request_data),
+                headers={"Content-Type": "application/json"},
+            ) as response:
                 data_dict: dict = orjson.loads(await response.text())
     except Exception:
-        raise Exception("Ошибка при получении данных ИГУ.")
+        # TODO: log exception
+        return None
     else:
         if "data" not in data_dict:
-            raise Exception("Ошибка при получении данных ИГУ.")
+            # TODO: log that data is none
+            return None
 
     lerka_data: list[dict] = list(
         filter(
@@ -58,7 +63,8 @@ async def parse_isu(
     )
 
     if len(lerka_data) == 0:
-        raise Exception("Ошибка при расшифровке данных ИГУ.")
+        # log that data is None
+        return None
 
     group_object = IsuCompetitionGroup(group=group, place=lerka_data[0].get("Место"))
 

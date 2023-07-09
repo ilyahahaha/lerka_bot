@@ -1,14 +1,13 @@
 from multiprocessing.pool import ThreadPool
 
-from aiogram import Router
-from aiogram.filters import Command, Text
+from aiogram import F, Router
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
-
-from common.keyboard import get_inline_keyboard
+from common.keyboard import ValidCallbacks, get_inline_keyboard
 from common.states import MainStateGroup
-from schemas.istu import IstuCompetitionGroup, IstuGroup
-from schemas.isu import IsuCompetitionGroup, IsuGroup
+from schemas.istu import IstuGroup
+from schemas.isu import IsuGroup
 from services.istu import parse_istu
 from services.isu import parse_isu
 from settings import Settings
@@ -17,7 +16,6 @@ from utils.messages import build_leaderboard, get_default_message
 router = Router()
 
 settings = Settings()
-
 SNILS = settings.snils
 
 
@@ -31,13 +29,16 @@ async def command_start_handler(message: Message, state: FSMContext) -> None:
     await message.answer(default_message, reply_markup=keyboard)
 
 
-@router.callback_query(Text("update_istu"))
-async def refresh_istu_state_handler(
-    callback: CallbackQuery, state: FSMContext
-) -> None:
+@router.callback_query(F.data.startswith("update:"))
+async def update_callback_handler(callback: CallbackQuery, state: FSMContext) -> None:
+    exact_callback = callback.data
+    current_state = await state.get_state()
+
+    pool = ThreadPool(processes=4)
+    results = []
+
     keyboard = get_inline_keyboard()
 
-    current_state = await state.get_state()
     if current_state == MainStateGroup.loading:
         return
 
@@ -45,91 +46,42 @@ async def refresh_istu_state_handler(
 
     await callback.message.edit_text("⏱ <b>Обновление данных...</b>")
 
-    pool = ThreadPool(processes=len(IstuGroup))
-    results: list[IstuCompetitionGroup] = []
+    match exact_callback:
+        case ValidCallbacks.UPDATE_ISU:
+            for group in IsuGroup:
+                result_coroutine = pool.apply_async(parse_isu, (SNILS, group))
 
-    for group in IstuGroup:
-        async_result = pool.apply_async(parse_istu, (SNILS, group))
+                result = await result_coroutine.get()
+                results.append(result)
+        case ValidCallbacks.UPDATE_ISTU:
+            for group in IstuGroup:
+                result_coroutine = pool.apply_async(parse_istu, (SNILS, group))
 
-        try:
-            result = await async_result.get()
-        except Exception:
-            await state.set_state(MainStateGroup.results)
-            data = await state.update_data({"istu_leaderboard": None})
+                result = await result_coroutine.get()
+                results.append(result)
+        # case ValidCallbacks.UPDATE_BGU:
+        #     for group in BguGroup:
+        #         result_coroutine = pool.apply_async(parse_bgu, (SNILS, group))
 
-            default_message = get_default_message(
-                callback.from_user.first_name,
-                isu_leaderboard=data.get("isu_leaderboard"),
-                istu_leaderboard=data.get("istu_leaderboard"),
-                bgu_leaderboard=data.get("bgu_leaderboard"),
+        #         result = await result_coroutine.get()
+        #         results.append(result)
+        case _:
+            await state.set_state(MainStateGroup.error)
+
+            # Log exception
+            await callback.message.edit_text(
+                "❌ <b>Ошибка!</b> Перезапустите бота.", reply_markup=keyboard
             )
 
-            return await callback.message.edit_text(
-                default_message, reply_markup=keyboard
-            )
+    exact_university = exact_callback.split(":")[1]
 
-        results.append(result)
-
-    await state.set_state(MainStateGroup.results)
     leaderboard = build_leaderboard(results)
-    data = await state.update_data({"istu_leaderboard": leaderboard})
+    state_data = await state.update_data({exact_university: leaderboard})
 
     default_message = get_default_message(
-        callback.from_user.first_name,
-        isu_leaderboard=data.get("isu_leaderboard"),
-        istu_leaderboard=data.get("istu_leaderboard"),
-        bgu_leaderboard=data.get("bgu_leaderboard"),
+        name=callback.from_user.first_name, state_data=state_data
     )
-
-    await callback.message.edit_text(default_message, reply_markup=keyboard)
-
-
-@router.callback_query(Text("update_isu"))
-async def refresh_isu_state_handler(callback: CallbackQuery, state: FSMContext) -> None:
-    keyboard = get_inline_keyboard()
-
-    current_state = await state.get_state()
-    if current_state == MainStateGroup.loading:
-        return
-
-    await state.set_state(MainStateGroup.loading)
-
-    await callback.message.edit_text("⏱ <b>Обновление данных...</b>")
-
-    pool = ThreadPool(processes=len(IsuGroup))
-    results: list[IsuCompetitionGroup] = []
-
-    for group in IsuGroup:
-        async_result = pool.apply_async(parse_isu, (SNILS, group))
-
-        try:
-            result = await async_result.get()
-        except Exception:
-            await state.set_state(MainStateGroup.results)
-            data = await state.update_data({"isu_leaderboard": None})
-
-            default_message = get_default_message(
-                callback.from_user.first_name,
-                isu_leaderboard=data.get("isu_leaderboard"),
-                istu_leaderboard=data.get("istu_leaderboard"),
-                bgu_leaderboard=data.get("bgu_leaderboard"),
-            )
-
-            return await callback.message.edit_text(
-                default_message, reply_markup=keyboard
-            )
-
-        results.append(result)
 
     await state.set_state(MainStateGroup.results)
-    leaderboard = build_leaderboard(results)
-    data = await state.update_data({"isu_leaderboard": leaderboard})
-
-    default_message = get_default_message(
-        callback.from_user.first_name,
-        isu_leaderboard=data.get("isu_leaderboard"),
-        istu_leaderboard=data.get("istu_leaderboard"),
-        bgu_leaderboard=data.get("bgu_leaderboard"),
-    )
 
     await callback.message.edit_text(default_message, reply_markup=keyboard)

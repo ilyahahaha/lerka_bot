@@ -1,13 +1,11 @@
-from bs4 import BeautifulSoup
-
 from aiohttp_client_cache import CachedSession, SQLiteBackend
-
+from bs4 import BeautifulSoup
 from schemas.istu import IstuCompetitionGroup, IstuGroup
 
 
 async def parse_istu(
     snils: str, group: IstuGroup = IstuGroup.ECONOMIC
-) -> IstuCompetitionGroup:
+) -> IstuCompetitionGroup | None:
     match group:
         case IstuGroup.ECONOMIC:
             url = f"https://www.istu.edu/served/rating.php?n={24356}"
@@ -23,10 +21,12 @@ async def parse_istu(
             async with session.get(url) as response:
                 data = await response.text()
     except Exception:
-        raise Exception("Ошибка при получении данных ИРНИТУ.")
+        # TODO: log exception
+        return None
     else:
+        # TODO: log that data is None
         if data is None:
-            raise Exception("Ошибка при получении данных ИРНИТУ.")
+            return None
 
     soup = BeautifulSoup(data, "lxml")
 
@@ -34,7 +34,7 @@ async def parse_istu(
     lerka_data = rating_table.find(attrs={"data-filter": f'["{snils}"]'})
 
     if lerka_data is None:
-        raise Exception("Ошибка при получении данных ИРНИТУ.")
+        return None
 
     group_object = IstuCompetitionGroup(
         group=group, place=int([el.text for el in lerka_data.find_all("td")][0])
