@@ -15,9 +15,13 @@ dependencies = [
     "aiosqlite>=0.19.0",
     "beautifulsoup4>=4.12.2",
     "lxml>=4.9.3",
+    "setuptools>=68.0.0"
 ]
 requires-python = ">=3.11"
 license = {text = "MIT"}
+
+[tool.pdm.scripts]
+start = {cmd = "python src/main.py"}
 
 [tool.pdm.dev-dependencies]
 format = [
@@ -25,7 +29,4 @@ format = [
 ]
 lint = [
     "ruff>=0.0.277",
-]
-build = [
-    "setuptools>=68.0.0",
 ]
