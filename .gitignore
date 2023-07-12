@@ -162,3 +162,6 @@ cython_debug/
 
 # Cache
 aiohttp-cache.sqlite
+
+# vscode
+.vscode
