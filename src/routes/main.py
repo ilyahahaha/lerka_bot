@@ -21,6 +21,9 @@ SNILS = settings.snils
 
 @router.message(Command(commands=["start"]))
 async def command_start_handler(message: Message) -> None:
+    if message.from_user.id not in settings.allowed_ids:
+        return await message.answer("❌ <b>Вам запрещено пользоваться этим ботом!</b>")
+
     default_message: str = get_default_message(message.from_user.first_name)
     keyboard = get_inline_keyboard()
 
