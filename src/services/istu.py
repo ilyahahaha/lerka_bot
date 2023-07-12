@@ -1,6 +1,12 @@
+import asyncio
+import logging
+
 from aiohttp_client_cache import CachedSession, SQLiteBackend
 from bs4 import BeautifulSoup
 from schemas.istu import IstuCompetitionGroup, IstuGroup
+from settings import Settings
+
+settings = Settings()
 
 
 async def parse_istu(
@@ -18,15 +24,15 @@ async def parse_istu(
 
     try:
         async with CachedSession(cache=SQLiteBackend()) as session:
-            async with session.get(url) as response:
+            async with session.get(url, timeout=settings.request_timeout) as response:
                 data = await response.text()
-    except Exception:
-        # TODO: log exception
+    except asyncio.TimeoutError:
+        logging.error(f"ISTU [{group}] - request timeout")
         return None
-    else:
-        # TODO: log that data is None
-        if data is None:
-            return None
+
+    if data is None:
+        logging.error(f"ISTU [{group}] - request data null")
+        return None
 
     soup = BeautifulSoup(data, "lxml")
 
@@ -34,6 +40,7 @@ async def parse_istu(
     lerka_data = rating_table.find(attrs={"data-filter": f'["{snils}"]'})
 
     if lerka_data is None:
+        logging.error(f"ISTU [{group}] - parsed data null")
         return None
 
     group_object = IstuCompetitionGroup(

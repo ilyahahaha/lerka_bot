@@ -1,13 +1,16 @@
 from typing import Any, Dict
 
+from common.keyboard import ValidCallbacks
 from schemas.bgu import BguCompetitionGroup
 from schemas.isu import IsuCompetitionGroup
 
 
 def get_default_message(name: str, state_data: Dict[str, Any] | None = None) -> str:
-    isu_leaderboard = state_data.get("isu") if state_data else None
-    istu_leaderboard = state_data.get("istu") if state_data else None
-    # bgu_leaderboard = state_data.get("bg") if state_data else None
+    isu_leaderboard = state_data.get(ValidCallbacks.UPDATE_ISU) if state_data else None
+    istu_leaderboard = (
+        state_data.get(ValidCallbacks.UPDATE_ISTU) if state_data else None
+    )
+    bgu_leaderboard = state_data.get(ValidCallbacks.UPDATE_BGU) if state_data else None
 
     message = (
         f"👋 <b>Привет,</b> {name}."
@@ -20,22 +23,24 @@ def get_default_message(name: str, state_data: Dict[str, Any] | None = None) -> 
         + f"\n{isu_leaderboard if isu_leaderboard else '❌ <i>Нет данных</i>'}\n\n"
         + "2️⃣ <b>ИРНИТУ: </b>"
         + f"\n{istu_leaderboard if istu_leaderboard else '❌ <i>Нет данных</i>'}\n\n"
-        # + "3️⃣ <b>БГУ: </b>"
-        # + f"\n{bgu_leaderboard if bgu_leaderboard else '❌ <i>Нет данных</i>'}"
+        + "3️⃣ <b>БГУ: </b>"
+        + f"\n{bgu_leaderboard if bgu_leaderboard else '❌ <i>Нет данных</i>'}"
     )
 
     return message
 
 
 def build_leaderboard(
-    results: list[IsuCompetitionGroup | IsuCompetitionGroup | BguCompetitionGroup],
+    result: list[
+        IsuCompetitionGroup | IsuCompetitionGroup | BguCompetitionGroup | None
+    ],
 ) -> str | None:
     message = []
 
-    if any(x is None for x in results):
-        return None
+    for result in result:
+        if result is None:
+            continue
 
-    for result in results:
         text_string = f"<code>🏆 {result.group} -</code> {result.place} место"
         message.append(text_string)
 

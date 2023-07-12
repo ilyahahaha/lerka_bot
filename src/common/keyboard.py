@@ -24,12 +24,12 @@ def get_inline_keyboard() -> InlineKeyboardMarkup:
         ]
     )
 
-    # builder.row(
-    #     *[
-    #         InlineKeyboardButton(
-    #             text="3️⃣ Обновить БГУ", callback_data=ValidCallbacks.UPDATE_BGU
-    #         )
-    #     ]
-    # )
+    builder.row(
+        *[
+            InlineKeyboardButton(
+                text="3️⃣ Обновить БГУ", callback_data=ValidCallbacks.UPDATE_BGU
+            )
+        ]
+    )
 
     return builder.as_markup()

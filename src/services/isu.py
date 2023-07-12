@@ -1,3 +1,6 @@
+import asyncio
+import logging
+
 import orjson
 from aiohttp_client_cache import CachedSession, SQLiteBackend
 from schemas.isu import IsuCompetitionGroup, IsuGroup
@@ -45,15 +48,19 @@ async def parse_isu(
                 "https://pk.isu.ru/x/getProcessor",
                 data=orjson.dumps(request_data),
                 headers={"Content-Type": "application/json"},
+                timeout=settings.request_timeout,
             ) as response:
                 data_dict: dict = orjson.loads(await response.text())
-    except Exception:
-        # TODO: log exception
+    except asyncio.TimeoutError:
+        logging.error(f"ISU [{group}] - request timeout")
         return None
-    else:
-        if "data" not in data_dict:
-            # TODO: log that data is none
-            return None
+    except orjson.JSONDecodeError:
+        logging.error(f"ISU [{group}] - missed json")
+        return None
+
+    if "data" not in data_dict:
+        logging.error(f"ISU [{group}] - json data null")
+        return None
 
     lerka_data: list[dict] = list(
         filter(
@@ -63,7 +70,7 @@ async def parse_isu(
     )
 
     if len(lerka_data) == 0:
-        # log that data is None
+        logging.error(f"ISU [{group}] - parse json data null")
         return None
 
     group_object = IsuCompetitionGroup(group=group, place=lerka_data[0].get("Место"))

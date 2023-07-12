@@ -7,6 +7,7 @@ from pydantic import BaseSettings
 class Settings(BaseSettings):
     bot_token: str
 
+    request_timeout: int
     allowed_ids: list[int]
     snils: str
 
